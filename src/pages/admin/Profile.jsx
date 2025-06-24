@@ -130,7 +130,7 @@ const Profile = () => {
                   <button onClick={() => setIsEdit(false)} className="bg-gray-300 px-4 py-2 rounded">Cancel</button>
                 </div>
               ) : (
-                <button onClick={() => setIsEdit(true)} className="bg-blue-600 text-white px-4 py-2 rounded">Edit</button>
+                <button onClick={() => setIsEdit(true)} className="bg-primary text-white rounded-full cursor-pointer text-white px-4 py-2 rounded">Edit</button>
               )}
 
               <div className="mt-4">
