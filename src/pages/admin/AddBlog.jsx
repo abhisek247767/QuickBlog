@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useRef, useState } from "react"
 import { assets, blogCategories } from "../../assets/assets"
 import Quill from "quill"

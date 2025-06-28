@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import BlogTableItem from "./BlogTableItem";
 import axios from "axios";
 import Loader from "../../components/Spinner";
+import toast from "react-hot-toast";
 import {
   FileText,
   RefreshCw,

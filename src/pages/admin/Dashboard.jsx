@@ -16,6 +16,8 @@ import {
   Eye,
   Settings,
 } from "lucide-react"
+import { useNavigate } from "react-router-dom";
+
 
 const Dashboard = () => {
   const [loadingBlogs, setLoadingBlogs] = useState(true)
@@ -23,6 +25,7 @@ const Dashboard = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [blogToDelete, setBlogToDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const navigate = useNavigate();
 
   const [blogsNo, setBlogsNo] = useState(0)
   const [comments, setComments] = useState(0)
@@ -268,7 +271,8 @@ const Dashboard = () => {
               </div>
               <h3 className="text-lg font-semibold text-gray-800 mb-2">No blog posts yet</h3>
               <p className="text-gray-600 mb-6">Start creating your first blog post to see it here.</p>
-              <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+              <button className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              onClick={() => navigate("/admin/addBlog")}>
                 Create Your First Post
               </button>
             </div>
