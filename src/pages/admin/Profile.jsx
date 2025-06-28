@@ -1,204 +1,189 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import { assets } from '../../assets/assets';
 import Loader from '../../components/Spinner';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { FaRegTrashCan } from "react-icons/fa6";
+import { CiWarning } from "react-icons/ci";
 
 const Profile = () => {
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState('');
+  const [isEdit, setIsEdit] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [subscriptonStatus, setSubscriptonStatus] = useState(false);
+  const [profileData, setProfileData] = useState({ fullname: '', username: '', phone: '', bio: '' });
 
-    const [loadingData, setLoadingData] = useState(true);
-    const [error, setError] = useState('');
-    const [isEdit, setIsEdit] = useState('');
-    const [subscriptonStatus,setSubscriptonStatus]=useState(false)
-    const [profileData, setProfileData] = useState({
-        fullname:'',
-        username:'',
-    });
+  const { logout } = useAuth();
+  const userId = localStorage.getItem("userId");
 
-    const {logout}=useAuth()
-    const userId = localStorage.getItem("userId")
-
-    const fetchData =async () => {
-    setLoadingData(true)
-    setError(null)
-
+  const fetchData = async () => {
+    setLoadingData(true);
+    setError(null);
     if (!userId) {
       setError("User ID not found. Please log in.");
       setLoadingData(false);
       return;
     }
     try {
-        const userRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user/get/${userId}`,{
-            withCredentials: true
-        })
-        const userData = userRes.data; 
-        setProfileData(userData);
-        console.log("user data fetched successfully", userData);
+      const userRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/user/get/${userId}`, { withCredentials: true });
+      const userData = userRes.data;
+      setProfileData(userData);
 
-        if (userData.username) { 
-            const subStatusRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscriptionstatus/${userData.username}`,{ withCredentials: true })
-            const subStatusData = subStatusRes.data;
-            console.log("Subscription status data:", subStatusData);
-            setSubscriptonStatus(subStatusData.status);
-        } else {
-            console.warn("User data fetched, but username is missing. Cannot fetch subscription status.");
-            setSubscriptonStatus(false); 
-        }
-
+      if (userData.username) {
+        const subStatusRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscriptionstatus/${userData.username}`, { withCredentials: true });
+        setSubscriptonStatus(subStatusRes.data.status);
+      }
     } catch (error) {
-        console.error("Error fetching data or subscription status:" ,error);
-        if (error.response && error.response.status === 401 || error.response.status === 403) {
-            toast.error("Session expired or unauthorized. Please log in again.");
-        } else {
-            toast.error("An error occurred while fetching user data or subscription status.");
-        }
-        setError("Failed to load profile or subscription status.");
+      toast.error("Session expired or unauthorized. Please log in again.");
+      setError("Failed to load profile or subscription status.");
     } finally {
-        setLoadingData(false);
-    }
-    
-  }
-
-  const handleUpdate =async () => {
-
-    if (!userId) {
-      setError("User ID not found. Please log in.");
       setLoadingData(false);
-      return;
-    }
-
-    setLoadingData(true)
-    setError(null)
-    setIsEdit(false)
-    
-    try {
-        const res=await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/user/update/${userId}`,profileData,{
-          withCredentials: true
-        })
-        const data=await res.data;
-        setProfileData(data);
-        console.log("user data updated successfully",data)
-        toast.success("data updated successfully")
-        toast.success("please log in with your new credentials!")
-        logout()
-      } catch (error) {
-        console.error("error updating data:" ,error)
-        if(error.response.status === 400){
-          setError("This email is already taken")
-        } else{
-        setError("An error occurred while updating user data.")               
-        }
-      }finally{
-        setLoadingData(false)
-      }
-  }
-
-  const handleSubscription=async ()=>{
-  try {
-    let email=profileData.username
-      const res = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/subscribe`,
-        { email,userId }, 
-        { withCredentials: true } 
-      );
-      toast.success(res.data.message || "Subscribed successfully!");
-      fetchData()
-    } catch (error) {
-      console.error("Error subscribing:", error);
-      let errorMessage = "Failed to subscribe. Please try again.";
-      if (error.response && error.response.data) {
-        errorMessage =
-          typeof error.response.data === "string"
-            ? error.response.data
-            : error.response.data.message || errorMessage;
-      }
-      toast.error(errorMessage);
     }
   };
 
-  const unsubscribe=async ()=>{
-    let email=profileData.username
-  try {
-      const res = await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/unsubscribe`,
-        { email,userId }, 
-        { withCredentials: true } 
-      );
-      toast.success("UnSubscribed successfully!");
-      fetchData()
+  const handleUpdate = async () => {
+    if (!userId) return;
+    setLoadingData(true);
+    setError(null);
+    setIsEdit(false);
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/user/update/${userId}`, profileData, { withCredentials: true });
+      setProfileData(res.data);
+      toast.success("Profile updated successfully");
     } catch (error) {
-      console.error("Error unsubscribing:", error);
+      toast.error("Failed to update profile");
+    } finally {
+      setLoadingData(false);
     }
-  }; 
+  };
 
-    useEffect(()=>{
-        fetchData()
-    },[])
+  const handleSubscription = async () => {
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/subscribe`, { email: profileData.username, userId }, { withCredentials: true });
+      toast.success(res.data.message || "Subscribed successfully!");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to subscribe.");
+    }
+  };
+
+  const unsubscribe = async () => {
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/unsubscribe`, { email: profileData.username, userId }, { withCredentials: true });
+      toast.success("Unsubscribed successfully!");
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to unsubscribe.");
+    }
+  };
+
+  const deleteAccount = async () => {
+    try {
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/user/delete/${userId}`, { withCredentials: true });
+      toast.success("Account deleted successfully");
+      logout();
+    } catch (error) {
+      toast.error("Failed to delete account");
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
-    <div>
-      <div className='flex flex-col gap-3 m-5 w-64'>
-        {loadingData ? (
-          <Loader loading={loadingData} spinnerSize="md" spinnerColor="text-purple-500" message="Loading profile data..." />
-        ) : error ? (
-          <div className="text-red-600 text-center p-4">
-            <p>Error: {error}</p>
-            <button
-              onClick={fetchData}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Retry
-            </button>
-          </div>
-        ):( 
+    <div className="p-6 max-w-2xl mx-auto">
+      {loadingData ? (
+        <Loader loading={loadingData} spinnerSize="md" spinnerColor="text-purple-500" message="Loading profile data..." />
+      ) : error ? (
+        <div className="text-red-600 text-center p-4">
+          <p>Error: {error}</p>
+          <button onClick={fetchData} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Retry</button>
+        </div>
+      ) : (
         <>
-        <div>
-          <img className='w-38 h-38 sm:max-w-64 rounded-lg ml-10' src={assets.user_icon} alt='profile' />
-        </div>
+          <div className="flex flex-col items-center">
+            <img className="w-32 h-32 rounded-full border-2 border-gray-300" src={assets.user_icon} alt="profile" />
+            <div className="w-full mt-6 bg-white p-6 rounded-lg shadow">
+              {['fullname', 'username', 'phone', 'bio'].map(field => (
+                <div className="mb-4" key={field}>
+                  <label className="block text-sm font-medium text-gray-700 capitalize">{field}</label>
+                  {isEdit ? (
+                    <input
+                      type="text"
+                      className="mt-1 block w-full border border-gray-400 p-2 rounded-lg "
+                      value={profileData[field] || ''}
+                      onChange={e => setProfileData(prev => ({ ...prev, [field]: e.target.value }))}
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-800">{profileData[field]}</p>
+                  )}
+                </div>
+              ))}
 
-        <div className='flex-1 border border-stone-100 rounded-lg p-8 py-7 bg-white'>
-        
-          <p className='flex items-center gap-2 sm:text-3xl text-xl font-medium text-gray-700'>
-            {isEdit ? <input type="text" onChange={(e) => setProfileData(prev => ({ ...prev, fullname: e.target.value }))} value={profileData.fullname} /> : profileData.fullname}
-          </p>
-          <div className='flex items-center gap-2 mt-4 text-gray-600'>
-            <p className='text-sm sm:text-base'>
-              {isEdit ? <input type="email" onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))} value={profileData.username} /> : profileData.username}
-            </p>
+              {isEdit ? (
+                <div className="flex gap-4">
+                  <button onClick={handleUpdate} className="bg-green-600 text-white px-4 py-2 rounded">Save</button>
+                  <button onClick={() => setIsEdit(false)} className="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+                </div>
+              ) : (
+                <button onClick={() => setIsEdit(true)} className="bg-primary text-white rounded-full cursor-pointer text-white px-4 py-2 rounded">Edit</button>
+              )}
+
+              <div className="mt-4">
+                {subscriptonStatus ? (
+                  <>
+                    <input className="mr-2" type="checkbox" checked readOnly />
+                    <span>Subscribed to latest blogs</span>
+                    <br />
+                    <button onClick={unsubscribe} className="mt-2 text-sm bg-red-500 text-white px-3 py-1 rounded">Unsubscribe</button>
+                  </>
+                ) : (
+                  <button onClick={handleSubscription} className="mt-2 text-sm bg-green-500 text-white px-3 py-1 rounded">Subscribe</button>
+                )}
+              </div>
+
+              {/* Danger Zone */}
+              <div className="mt-10 p-4 border border-red-500 bg-red-50 rounded">
+                <div className="flex items-center gap-2 text-red-600 font-bold">
+                  <CiWarning /> Danger Zone
+                </div>
+                <p className="text-sm text-red-600 mt-2">Deleting your account is permanent and cannot be undone.</p>
+                <button onClick={() => setShowDeleteModal(true)} className="mt-3 flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded">
+                  <FaRegTrashCan /> Delete Account
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* ---- Edit & Save Buttons ---- */}
-          {isEdit ? (
-            <div className='flex gap-4 mt-4'>
-            <button onClick={handleUpdate} className='px-8 py-2 border border-primary text-sm rounded-full mt-5 bg-primary text-white hover:scale-105 transition duration-200'>
-              Save
-            </button>
-            <button onClick={()=>setIsEdit(false)} className='px-8 py-2 border border-primary text-sm rounded-full mt-5 hover:scale-105 transition duration-200'>
-              Cancel
-            </button>
+          {/* Delete Modal */}
+          {showDeleteModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-60 backdrop-blur-sm">
+              <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full">
+                <h2 className="text-lg font-bold text-red-600 mb-4">Confirm Account Deletion</h2>
+                <p className="text-sm mb-2">Please type <span className="font-bold">DELETE</span> to confirm:</p>
+                <input
+                  type="text"
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  className="w-full rounded mb-4 border border-gray-400 p-2 rounded-lg text-base shadow-[0px_2px_0px_rgba(0,0,0,0.04)] placeholder:text-[14px] placeholder:font-normal active:border-[#1369E9] focus:border-[#1369E9] focus:shadow-inputShadow placeholder:text-[#A9A9AC] "
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                  <button onClick={deleteAccount} disabled={deleteInput !== 'DELETE'} className={`px-4 py-2 rounded ${deleteInput === 'DELETE' ? 'bg-red-600 text-white' : 'bg-red-200 text-red-500 cursor-not-allowed'}`}>
+                    Confirm Delete
+                  </button>
+                </div>
+              </div>
             </div>
-          ) : (
-            <button onClick={() => setIsEdit(true)} className='px-8 py-2 border border-primary text-sm rounded-full mt-5 hover:bg-primary hover:text-white'>
-              Edit
-            </button>
           )}
-          <br/>
-          {subscriptonStatus && 
-          <>
-          <input className='mt-5'  type='checkbox' defaultChecked={subscriptonStatus} /><span>Subscribed to latest blogs</span><br/>
-          <button className='mt-4 bg-primary px-3 py-2 rounded-full text-white hover:scale-105 transition duration-200' onClick={unsubscribe}>Unsubsribe</button>
-          <br/>
-          </>}
-          {!subscriptonStatus && 
-          <button className='mt-4 bg-primary px-3 py-2 rounded-full text-white hover:scale-105 transition duration-200' onClick={handleSubscription}>Subsribe</button>
-          }
-        </div>
         </>
-        )}
-      </div>
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default Profile
+export default Profile;
